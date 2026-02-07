@@ -7,11 +7,16 @@ st.set_page_config(page_title="Ward Election Dashboard", layout="wide")
 st.title("🗳 Ward Election Member Dashboard")
 
 # Upload File
-uploaded_file = st.file_uploader("Upload Ward Excel File", type=["xlsx"])
+uploaded_file = st.file_uploader(
+    "Upload Ward Excel / CSV File", type=["xlsx","csv"]
+)
 
 if uploaded_file is not None:
 
     # Load data
+    if uploaded_file.name.endswith(".csv"):
+    df = pd.read_csv(uploaded_file)
+else:
     df = pd.read_excel(uploaded_file)
 
     # ----------------------------
