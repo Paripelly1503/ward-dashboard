@@ -3,18 +3,29 @@ import pandas as pd
 import plotly.express as px
 
 st.set_page_config(page_title="Ward Election Dashboard", layout="wide")
-
 st.title("🗳 Ward Election Member Dashboard")
 
-# Upload Excel
 uploaded_file = st.file_uploader("Upload Ward Excel File", type=["xlsx"])
 
 if uploaded_file:
     df = pd.read_excel(uploaded_file)
 
+    # Normalize column names
+    df.columns = df.columns.str.strip().str.lower()
+
+    def find_col(keyword):
+        for col in df.columns:
+            if keyword in col:
+                return col
+        return None
+
+    house_col = find_col("house")
+    fname_col = find_col("first")
+    lname_col = find_col("last")
+    religion_col = find_col("relig")
+
     st.success("File loaded successfully!")
 
-    # Sidebar Filters
     st.sidebar.header("Search Filters")
 
     house = st.sidebar.text_input("Enter House Number")
@@ -23,33 +34,32 @@ if uploaded_file:
 
     filtered = df.copy()
 
-    if house:
-        filtered = filtered[filtered["House Number"].astype(str).str.contains(house, case=False)]
+    if house and house_col:
+        filtered = filtered[filtered[house_col].astype(str).str.contains(house, case=False)]
 
-    if fname:
-        filtered = filtered[filtered["First Name"].str.contains(fname, case=False)]
+    if fname and fname_col:
+        filtered = filtered[filtered[fname_col].astype(str).str.contains(fname, case=False)]
 
-    if lname:
-        filtered = filtered[filtered["Last Name"].str.contains(lname, case=False)]
+    if lname and lname_col:
+        filtered = filtered[filtered[lname_col].astype(str).str.contains(lname, case=False)]
 
-    # KPIs
     col1, col2, col3 = st.columns(3)
     col1.metric("Total Members Found", len(filtered))
-    col2.metric("Unique Houses", filtered["House Number"].nunique())
-    col3.metric("Unique First Names", filtered["First Name"].nunique())
+
+    if house_col:
+        col2.metric("Unique Houses", filtered[house_col].nunique())
+    if fname_col:
+        col3.metric("Unique First Names", filtered[fname_col].nunique())
 
     st.divider()
 
-    # Table
     st.subheader("Matching Members")
     st.dataframe(filtered, use_container_width=True)
 
-    st.divider()
-
-    # Religion Chart
-    if "Religion" in df.columns:
+    if religion_col:
+        st.divider()
         st.subheader("Religion Distribution")
-        fig = px.pie(filtered, names="Religion")
+        fig = px.pie(filtered, names=religion_col)
         st.plotly_chart(fig, use_container_width=True)
 
 else:
