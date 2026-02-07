@@ -6,88 +6,68 @@ import plotly.express as px
 # PAGE CONFIG
 # ----------------------------
 st.set_page_config(page_title="Ward Election Dashboard", layout="wide")
-st.title("🗳 Ward Election Member Dashboard")
+st.title("🗳 Ward 26 Voter Dashboard")
 
 # ----------------------------
 # FILE UPLOAD
 # ----------------------------
 uploaded_file = st.file_uploader(
-    "Upload Ward Excel or CSV File",
-    type=["xlsx", "csv"]
+    "Upload Ward Excel File",
+    type=["xlsx"]
 )
 
 if uploaded_file is not None:
 
-    # ----------------------------
-    # LOAD DATA
-    # ----------------------------
-    if uploaded_file.name.endswith(".csv"):
-        df = pd.read_csv(uploaded_file)
-    else:
-        df = pd.read_excel(uploaded_file)
+    # Read file WITHOUT headers
+    raw = pd.read_excel(uploaded_file, header=None)
 
-    # ----------------------------
-    # CLEAN DATA
-    # ----------------------------
+    # Take first row as header
+    raw.columns = raw.iloc[0]
+    df = raw[1:]
+
+    # Clean column names
+    df.columns = df.columns.astype(str).str.strip().str.lower()
+
+    # Remove blank rows
     df.dropna(how="all", inplace=True)
-    df = df[~df.apply(lambda r: r.astype(str).str.strip().eq("").all(), axis=1)]
     df.fillna("", inplace=True)
-    df.columns = df.columns.str.strip().str.lower()
 
-    # ----------------------------
-    # AUTO COLUMN FIND
-    # ----------------------------
-    def find_col(word):
-        for c in df.columns:
-            if word in c:
-                return c
-        return None
-
-    house_col = find_col("house")
-    fname_col = find_col("first")
-    lname_col = find_col("last")
-    religion_col = find_col("relig")
+    # Rename needed columns
+    df.rename(columns={
+        "name": "name",
+        "house no": "house",
+        "gender": "gender",
+        "age": "age"
+    }, inplace=True)
 
     st.success("File loaded successfully!")
 
     # ----------------------------
-    # SIDEBAR FILTERS
+    # SIDEBAR SEARCH
     # ----------------------------
     st.sidebar.header("Search Filters")
 
     house = st.sidebar.text_input("Enter House Number")
-    fname = st.sidebar.text_input("Enter First Name")
-    lname = st.sidebar.text_input("Enter Last Name")
+    name = st.sidebar.text_input("Enter Name")
 
     filtered = df.copy()
 
-    if house and house_col:
+    if house:
         filtered = filtered[
-            filtered[house_col].astype(str).str.contains(house, case=False)
+            filtered["house"].astype(str).str.contains(house, case=False)
         ]
 
-    if fname and fname_col:
+    if name:
         filtered = filtered[
-            filtered[fname_col].astype(str).str.contains(fname, case=False)
-        ]
-
-    if lname and lname_col:
-        filtered = filtered[
-            filtered[lname_col].astype(str).str.contains(lname, case=False)
+            filtered["name"].astype(str).str.contains(name, case=False)
         ]
 
     # ----------------------------
-    # KPI CARDS
+    # METRICS
     # ----------------------------
-    c1, c2, c3 = st.columns(3)
-
+    c1, c2 = st.columns(2)
     c1.metric("Total Members Found", len(filtered))
-
-    if house_col:
-        c2.metric("Unique Houses", filtered[house_col].nunique())
-
-    if fname_col:
-        c3.metric("Unique First Names", filtered[fname_col].nunique())
+    c2.metric("Unique Houses", filtered["house"].nunique())
 
     st.divider()
 
@@ -95,16 +75,19 @@ if uploaded_file is not None:
     # TABLE
     # ----------------------------
     st.subheader("Matching Members")
-    st.dataframe(filtered, use_container_width=True)
+    st.dataframe(
+        filtered[["name","house","gender","age"]],
+        use_container_width=True
+    )
 
     # ----------------------------
-    # PIE CHART
+    # GENDER PIE CHART
     # ----------------------------
-    if religion_col:
+    if "gender" in filtered.columns:
         st.divider()
-        st.subheader("Religion Distribution")
-        fig = px.pie(filtered, names=religion_col)
+        st.subheader("Gender Distribution")
+        fig = px.pie(filtered, names="gender")
         st.plotly_chart(fig, use_container_width=True)
 
 else:
-    st.info("Upload your Excel or CSV file to start.")
+    st.info("Upload your Excel file to start.")
