@@ -11,7 +11,17 @@ if uploaded_file:
     df = pd.read_excel(uploaded_file)
 
     # Normalize column names
-    df.columns = df.columns.str.strip().str.lower()
+df = pd.read_excel(uploaded_file)
+
+# Drop completely empty rows
+df.dropna(how="all", inplace=True)
+
+# Rename columns properly
+df.columns = df.columns.str.strip().str.lower()
+
+# Replace remaining NaN with empty string
+df.fillna("", inplace=True)
+df.columns = [c.title() for c in df.columns]
 
     def find_col(keyword):
         for col in df.columns:
