@@ -5,32 +5,30 @@ import plotly.express as px
 # --------------------------------
 # PAGE CONFIG
 # --------------------------------
-st.set_page_config(page_title="Ward 26 Voter Dashboard", layout="wide")
+st.set_page_config(page_title="Ward 26 Voter Search", layout="wide")
 
-st.title("🗳 Ward 26 Voter Dashboard")
+st.title("🗳 Ward 26 Voter Search App")
+st.write("Enter **House Number / First Name / Last Name** below")
 
 # --------------------------------
-# LOAD DATA (AUTO)
+# LOAD DATA
 # --------------------------------
 df_raw = pd.read_excel("26ward.xlsx", header=None)
-
 df_raw.columns = df_raw.iloc[0]
 df = df_raw.iloc[1:].copy()
 
-# Remove empty rows
 df = df.dropna(how="all")
 df = df.fillna("")
 
-# Map columns
 df["NAME"] = df.iloc[:,4].astype(str)
 df["GENDER"] = df.iloc[:,6].astype(str)
 df["AGE"] = df.iloc[:,7].astype(str)
 df["HOUSE"] = df.iloc[:,9].astype(str)
 
-# Remove rows without Name or House
+# Remove blank name & house
 df = df[(df["NAME"].str.strip() != "") & (df["HOUSE"].str.strip() != "")]
 
-# Clean Gender
+# Clean gender
 def clean_gender(x):
     x = x.strip().upper()
     if x == "M":
@@ -43,55 +41,50 @@ def clean_gender(x):
 df["GENDER"] = df["GENDER"].apply(clean_gender)
 
 # --------------------------------
-# SEARCH
+# SEARCH INPUT (BIG BOX)
 # --------------------------------
-st.sidebar.header("🔍 Search")
-search = st.sidebar.text_input("Type Name or House Number")
+search = st.text_input(
+    "",
+    placeholder="🔍 Type Name or House Number and press Enter"
+)
 
-filtered = df.copy()
+st.divider()
 
+# --------------------------------
+# SHOW RESULTS ONLY AFTER SEARCH
+# --------------------------------
 if search:
-    filtered = filtered[
+
+    results = df[
         df["NAME"].str.contains(search, case=False) |
         df["HOUSE"].str.contains(search, case=False)
     ]
 
-# --------------------------------
-# METRICS
-# --------------------------------
-c1, c2 = st.columns(2)
-c1.metric("Members Found", len(filtered))
-c2.metric("Total Houses", filtered["HOUSE"].nunique())
+    st.subheader(f"Results Found : {len(results)}")
 
-st.divider()
+    st.dataframe(
+        results[["NAME","HOUSE","GENDER","AGE"]],
+        use_container_width=True,
+        hide_index=True
+    )
 
-# --------------------------------
-# TABLE
-# --------------------------------
-st.subheader("📋 Members List")
+    # -----------------------------
+    # GENDER PIE
+    # -----------------------------
+    gender_df = results[results["GENDER"] != ""]
+    gender_counts = gender_df["GENDER"].value_counts().reset_index()
+    gender_counts.columns = ["Gender","Count"]
 
-st.dataframe(
-    filtered[["NAME","HOUSE","GENDER","AGE"]],
-    use_container_width=True,
-    hide_index=True
-)
+    st.subheader("Male vs Female")
 
-st.divider()
+    fig = px.pie(
+        gender_counts,
+        names="Gender",
+        values="Count",
+        hole=0.4
+    )
 
-# --------------------------------
-# GENDER PIE
-# --------------------------------
-gender_df = filtered[filtered["GENDER"] != ""]
-gender_counts = gender_df["GENDER"].value_counts().reset_index()
-gender_counts.columns = ["Gender","Count"]
+    st.plotly_chart(fig, use_container_width=True)
 
-st.subheader("👥 Male vs Female")
-
-fig = px.pie(
-    gender_counts,
-    names="Gender",
-    values="Count",
-    hole=0.4
-)
-
-st.plotly_chart(fig, use_container_width=True)
+else:
+    st.info("👆 Start by typing Name or House Number")
