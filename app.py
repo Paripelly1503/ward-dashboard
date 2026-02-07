@@ -7,26 +7,20 @@ st.title("🗳 Ward Election Member Dashboard")
 
 uploaded_file = st.file_uploader("Upload Ward Excel File", type=["xlsx"])
 
-if uploaded_file:
+if uploaded_file is not None:
+
     df = pd.read_excel(uploaded_file)
 
-    # Normalize column names
-df = pd.read_excel(uploaded_file)
+    # Clean data
+    df.dropna(how="all", inplace=True)
+    df.fillna("", inplace=True)
+    df.columns = df.columns.str.strip().str.lower()
 
-# Drop completely empty rows
-df.dropna(how="all", inplace=True)
-
-# Rename columns properly
-df.columns = df.columns.str.strip().str.lower()
-
-# Replace remaining NaN with empty string
-df.fillna("", inplace=True)
-df.columns = [c.title() for c in df.columns]
-
-    def find_col(keyword):
-        for col in df.columns:
-            if keyword in col:
-                return col
+    # Find matching columns automatically
+    def find_col(word):
+        for c in df.columns:
+            if word in c:
+                return c
         return None
 
     house_col = find_col("house")
@@ -58,6 +52,7 @@ df.columns = [c.title() for c in df.columns]
 
     if house_col:
         col2.metric("Unique Houses", filtered[house_col].nunique())
+
     if fname_col:
         col3.metric("Unique First Names", filtered[fname_col].nunique())
 
