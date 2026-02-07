@@ -2,43 +2,41 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# Page settings
+# ----------------------------
+# PAGE CONFIG
+# ----------------------------
 st.set_page_config(page_title="Ward Election Dashboard", layout="wide")
 st.title("🗳 Ward Election Member Dashboard")
 
-# Upload File
+# ----------------------------
+# FILE UPLOAD
+# ----------------------------
 uploaded_file = st.file_uploader(
-    "Upload Ward Excel / CSV File", type=["xlsx","csv"]
+    "Upload Ward Excel or CSV File",
+    type=["xlsx", "csv"]
 )
 
 if uploaded_file is not None:
 
-    # Load data
+    # ----------------------------
+    # LOAD DATA
+    # ----------------------------
     if uploaded_file.name.endswith(".csv"):
-    df = pd.read_csv(uploaded_file)
-else:
-    df = pd.read_excel(uploaded_file)
+        df = pd.read_csv(uploaded_file)
+    else:
+        df = pd.read_excel(uploaded_file)
 
     # ----------------------------
-    # CLEANING DATA
+    # CLEAN DATA
     # ----------------------------
-
-    # Remove completely empty rows
     df.dropna(how="all", inplace=True)
-
-    # Remove rows where all cells are blank strings
-    df = df[~df.apply(lambda row: row.astype(str).str.strip().eq("").all(), axis=1)]
-
-    # Replace remaining NaN with empty string
+    df = df[~df.apply(lambda r: r.astype(str).str.strip().eq("").all(), axis=1)]
     df.fillna("", inplace=True)
-
-    # Normalize column names
     df.columns = df.columns.str.strip().str.lower()
 
     # ----------------------------
-    # AUTO COLUMN DETECTION
+    # AUTO COLUMN FIND
     # ----------------------------
-
     def find_col(word):
         for c in df.columns:
             if word in c:
@@ -55,7 +53,6 @@ else:
     # ----------------------------
     # SIDEBAR FILTERS
     # ----------------------------
-
     st.sidebar.header("Search Filters")
 
     house = st.sidebar.text_input("Enter House Number")
@@ -82,30 +79,27 @@ else:
     # ----------------------------
     # KPI CARDS
     # ----------------------------
+    c1, c2, c3 = st.columns(3)
 
-    col1, col2, col3 = st.columns(3)
-
-    col1.metric("Total Members Found", len(filtered))
+    c1.metric("Total Members Found", len(filtered))
 
     if house_col:
-        col2.metric("Unique Houses", filtered[house_col].nunique())
+        c2.metric("Unique Houses", filtered[house_col].nunique())
 
     if fname_col:
-        col3.metric("Unique First Names", filtered[fname_col].nunique())
+        c3.metric("Unique First Names", filtered[fname_col].nunique())
 
     st.divider()
 
     # ----------------------------
     # TABLE
     # ----------------------------
-
     st.subheader("Matching Members")
     st.dataframe(filtered, use_container_width=True)
 
     # ----------------------------
-    # RELIGION PIE CHART
+    # PIE CHART
     # ----------------------------
-
     if religion_col:
         st.divider()
         st.subheader("Religion Distribution")
@@ -113,4 +107,4 @@ else:
         st.plotly_chart(fig, use_container_width=True)
 
 else:
-    st.info("Upload your Excel file to start.")
+    st.info("Upload your Excel or CSV file to start.")
